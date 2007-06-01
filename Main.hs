@@ -2,6 +2,7 @@
 module Main where
 
 import System.Environment
+import System.Directory
 import Fragment
 import Check
 
@@ -9,7 +10,8 @@ import Check
 main = do
     (x:xs) <- getArgs
     src <- readFile x
-    pre <- readFile "Include.hs"
+    b <- doesFileExist "Include.hs"
+    pre <- if b then readFile "Include.hs" else return ""
     checkFragments ("-d" `elem` xs)
                    (parseRanges $ filter (/= "-d") xs)
                    pre (parseFragments src)
