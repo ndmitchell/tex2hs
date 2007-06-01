@@ -1,0 +1,27 @@
+We have developed a method for short-cut fusion using |foldr|/|build|. By introducing the definition:
+
+\begin{code}
+build :: ((a -> [a] -> [a]) -> [b] -> c) -> c
+build g = g (:) []
+\end{code}
+
+The standard definition of |map| is:
+
+\begin{code}
+map :: (a -> b) -> [a] -> [b]
+map f []      = []
+map f (x:xs)  = f x : map f xs
+\end{code}
+
+But we redefine it as:
+
+\begin{code}
+map :: (a -> b) -> [a] -> [b]
+map f = foldr ((:) . f) []
+\end{code}
+
+Which now allows us to have the property:
+
+\begin{code}
+propEq g k z = foldr k z (build g) == g k z
+\end{code}
