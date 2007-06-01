@@ -4,16 +4,29 @@ module Check where
 import Fragment
 import System
 import Data.List
+import Data.Char
+import Control.Monad
+import Debug.Trace
 
 
-data Result = Pass | Fail String | Missing String
+data Result = Pass | Fail String | Missing String | Instances [String]
               deriving (Eq,Show)
 
+builtin = ["Int","Bool","Float","Integer","String","Char"]
 
-checkFragments :: String -> [Frag] -> IO ()
-checkFragments prefix xs = mapM_ f xs
+
+checkFragments :: Bool -> (Int -> Bool) -> String -> [Frag] -> IO ()
+checkFragments debug test prefix xs = mapM_ f xs
     where
-        f (Frag i has s) | i < 262= do
+        names = [drop 5 x | x <- lines prefix, "-- # " `isPrefixOf` x]
+        insts = [drop 12 x | x <- lines prefix, "-- instance " `isPrefixOf` x]
+    
+        f (Expr i s)
+            | test i && s `elem` (names ++ builtin ++ concat [has | Stmt _ has _ <- xs])
+            = putStrLn $ "Checking line " ++ show i ++ "... success"
+
+        f (Expr i s) = f $ Stmt i [] ("tex2hs _ = (" ++ s ++ ")")
+        f (Stmt i has s) | test i = do
             putStr $ "Checking line " ++ show i ++ "... "
             res <- check (prefix ++ "\n" ++ s)
             case res of
@@ -26,9 +39,12 @@ checkFragments prefix xs = mapM_ f xs
         f _ = return ()
 
         check s = do
-            res <- checkCode s
+            res <- checkCode debug s
             case res of
-                Missing x -> g (Fail $ "Can't find: " ++ show x) s [t | Frag _ has t <- xs, x `elem` has]
+                Missing x -> g (Fail $ "Can't find: " ++ show x) s [t | Stmt _ has t <- xs, x `elem` has]
+                Instances x ->
+                    let add = unlines ["instance " ++ i | i <- x, i `elem` insts]
+                    in g (Fail $ "No instance: " ++ show x) s [add | not $ null add]
                 _ -> return res
         
         g err s [] = return err
@@ -36,16 +52,51 @@ checkFragments prefix xs = mapM_ f xs
             r <- check (s ++ "\n" ++ x)
             if r == Pass then return Pass else g r s xs
 
-
-checkCode :: String -> IO Result
-checkCode s = do
-    writeFile "temp.hs" s
-    res <- system "ffihugs temp.hs 2> temp.txt"
+checkCode :: Bool -> String -> IO Result
+checkCode debug orig = do
+    writeFile "temp.hs" orig
+    res <- system "ffihugs -98 temp.hs 2> temp.txt"
     if res == ExitSuccess then return Pass else do
         x <- readFile "temp.txt"
         let s = unlines $ filter (not . null) $ drop 1 $ lines x
-        return $ if any ("- Undefined" `isPrefixOf`) (tails s)
-            then Missing $ takeWhile (/= '\"') $ drop 1 $ dropWhile (/= '\"') $ dropWhile (/= '-') s
-            else Fail s
+            err = parseError s
+        
+        when debug $ do
+            putStrLn orig
+            putStrLn s
+            print err
+            getChar
+            return ()
+
+        return err
+
+parseError s =
+    if any ("- Undefined" `isPrefixOf`) (tails s) then
+        Missing $ takeWhile (/= '\"') $ drop 1 $ dropWhile (/= '\"') $ dropWhile (/= '-') s
+    else if any ("- Instance" `isPrefixOf`) (tails s) then
+        Instances $ insts s
+    else if any ("requires extra context" `isPrefixOf`) (tails s) then
+        Instances $ nub $ insts2 s
+    else
+        Fail s
 
 
+
+insts = map (unwords . words) . lines . map rep . sel
+    where
+        rep x = if x == ',' then '\n'
+                else if x `elem` "()" then ' '
+                else x
+    
+        sel (' ':'o':'f':' ':xs) = g xs
+        sel (x:xs) = sel xs
+        
+        g (' ':'r':xs) = []
+        g (x:xs) = x : g xs
+
+
+insts2 = map (unwords . words) . lines . map rep . reverse . takeWhile (/= ':') . reverse
+    where
+        rep x = if x == ',' then '\n'
+                else if x `elem` "()" then ' '
+                else x
