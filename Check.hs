@@ -2,7 +2,9 @@
 module Check where
 
 import Fragment
-import System
+import System.Cmd
+import System.Exit
+import System.IO
 import Data.List
 import Data.Char
 import Control.Monad
@@ -57,7 +59,7 @@ checkCode debug orig = do
     writeFile "temp.hs" orig
     res <- system "ffihugs -98 temp.hs 2> temp.txt"
     if res == ExitSuccess then return Pass else do
-        x <- readFile "temp.txt"
+        x <- readFileStrict "temp.txt"
         let s = unlines $ filter (not . null) $ drop 1 $ lines x
             err = parseError s
         
@@ -69,6 +71,14 @@ checkCode debug orig = do
             return ()
 
         return err
+
+
+readFileStrict s = do
+    h <- openFile s ReadMode
+    s <- hGetContents h
+    length s `seq` hClose h
+    return s
+
 
 parseError s =
     if any ("- Undefined" `isPrefixOf`) (tails s) then
