@@ -1,0 +1,13 @@
+Name:           tex2hs
+Version:        0.1
+Copyright:      2006-7, Neil Mitchell
+Maintainer:     ndmitchell@gmail.com
+Homepage:       http://www-users.cs.york.ac.uk/~ndm/tex2hs/
+Build-Depends:  base
+License:        BSD3
+Author:         Neil Mitchell
+Synopsis:       A program to check for type errors in a Latex document/
+Category:       Academic
+
+Executable:     tex2hs
+Main-Is:        Main.hs
