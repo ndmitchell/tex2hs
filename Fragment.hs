@@ -72,11 +72,13 @@ providesClass x = [pre !! 1]
 
 
 providesData :: String -> [String]
-providesData x = (ws!!1) : concat [f (a2:as) | a1:a2:as <- tails ws, a1 `elem` ["|","="]]
+providesData x = (ws!!1) : concat [f $ takeWhile (/= "|") (a2:as) | a1:a2:as <- tails ws, a1 `elem` ["|","="]]
     where
         ws = words x
+        f xs | not $ null res = res
+            where res = take 1 $ filter (":" `isPrefixOf`) xs
         f ((x:xs):_) | isUpper x = [x:xs]
-        f xs = take 1 $ filter (":" `isPrefixOf`) xs
+        f _ = []
 
 
 tweak :: String -> String
