@@ -3,11 +3,14 @@ module Main where
 
 import System.Environment
 import System.Directory
+import System.IO
 import Fragment
 import Check
 
 
 main = do
+    hSetBuffering stdin NoBuffering
+    hSetBuffering stdout NoBuffering
     (x:xs) <- getArgs
     src <- readFile x
     b <- doesFileExist "Include.hs"
