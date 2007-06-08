@@ -86,22 +86,29 @@ tweak = unlines . f . lines
             | "module " `isPrefixOf` x = f xs
             | "import " `isPrefixOf` x = f xs
 
-        f (x:xs) | isJust typ && typ /= fun = x : def : f xs
+        f (x:xs) | isJust typ && not (isFunc (fromJust typ) xs) = x : def : f xs
             where
-                def = fromJust typ ++ " = undefined"
+                def = "(" ++ fromJust typ ++ ") = undefined"
                 typ = isType x
-                fun = isFunc xs
         
         f (x:xs) = x : f xs
         f [] = []
 
 
 isType :: String -> Maybe String
-isType x = if length xs > 1 && (xs !! 1) == "::" && not (isSpace $ head x) then Just (head xs) else Nothing
-    where xs = words x
+isType x | all isSpace (take 1 x) = Nothing
+         | otherwise = case lexemes x of
+                            (a:"::":_) -> Just a
+                            ("(":a:")":"::":_) -> Just a
+                            _ -> Nothing
 
-isFunc :: [String] -> Maybe String
-isFunc ((' ':_):xs) = isFunc xs
-isFunc (x:xs) = if length xs > 0 then Just (head xs) else Nothing
-    where xs = words x
-isFunc _ = Nothing
+
+isFunc :: String -> [String] -> Bool
+isFunc name xs = name `elem` ws
+    where ws = takeWhile (/= "=") $ lexemes $ concat $ take 1 xs
+
+
+lexemes :: String -> [String]
+lexemes x = case lex x of
+    [("",_)] -> []
+    [(x,y)] -> x : lexemes y
