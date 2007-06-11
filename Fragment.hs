@@ -107,7 +107,7 @@ isType x | all isSpace (take 1 x) = Nothing
 
 isFunc :: String -> [String] -> Bool
 isFunc name xs = name `elem` ws
-    where ws = takeWhile (/= "=") $ lexemes $ concat $ take 1 xs
+    where ws = takeWhile (/= "=") $ lexemes $ concat $ take 1 $ dropWhile (" " `isPrefixOf`) xs
 
 
 lexemes :: String -> [String]
