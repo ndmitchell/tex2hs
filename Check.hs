@@ -14,7 +14,8 @@ import Debug.Trace
 data Result = Pass | Fail String | Missing String | Instances [String]
               deriving (Eq,Show)
 
-builtin = ["Int","Bool","Float","Integer","String","Char"]
+builtin = ["where"] ++
+          ["Int","Bool","Float","Integer","String","Char"]
 
 
 checkFragments :: Bool -> (Int -> Bool) -> String -> [Frag] -> IO ()
