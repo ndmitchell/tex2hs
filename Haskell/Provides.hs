@@ -37,11 +37,12 @@ provider :: [String] -> [Provides]
 provider xs = case xs of
     "type":xs -> [ProvidesName $ headNote 1 con]
     "data":xs -> ProvidesName (headNote 2 con) : providerCtors (map (rep "=" "|") (tail con))
-    "class":xs -> ProvidesName (headNote 3 con) : concatMap provider (tail $ split ";" con)
-    _ | "::" `elem` xs -> providesSig xs
+    "class":xs -> ProvidesName (headNote 3 con) : map asClass (concatMap provider (tail $ split ";" con))
+    _ | "::" `elem` (takeWhile (/= "where") xs) -> providesSig xs
     _ -> providesBody xs
     where
         con = dropContext $ tail xs
+        asClass = ProvidesName . fromProvides
 
         dropContext xs = if null b then a else tail b
             where (a,b) = break (== "=>") xs
